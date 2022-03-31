@@ -17,6 +17,9 @@ from pie import check, utils, i18n
 from .database import Relation
 from .image_utils import ImageUtils
 
+# ODSTRANIT!!!!!!!!
+from datetime import datetime
+
 _ = i18n.Translator("modules/fun").translate
 config = pie.database.config.Config.get()
 
@@ -44,7 +47,7 @@ class Fun(commands.Cog):
         self.pending_hugs: Set[Tuple[int, int]] = {*()}
 
     @commands.guild_only()
-    @commands.cooldown(rate=2, per=10.0, type=commands.BucketType.user)
+    # @commands.cooldown(rate=2, per=10.0, type=commands.BucketType.user)
     @check.acl2(check.ACLevel.MEMBER)
     @commands.command()
     async def hug(self, ctx, *, user: Union[nextcord.Member, nextcord.Role] = None):
@@ -80,11 +83,22 @@ class Fun(commands.Cog):
             target_name: str = utils.text.sanitise(target.display_name)
             message: str = f"{border}{source_name}{border} {hug_emoji} {border}{target_name}{border}"
 
+        now = datetime.now()
+        current_time = now.strftime("%H:%M:%S")
+        print("\n")
+
         await ctx.send(message)
         self.pending_hugs.add((source.id, target.id))
-        await asyncio.sleep(20)
+        print(current_time, "add source-target")
+        # source, target = target, source
+        # print(current_time, "swap")
+        with contextlib.suppress(KeyError):
+            self.pending_hugs.remove((target.id, source.id))
+        print(current_time, "remove target-source")
+        await asyncio.sleep(5)
         with contextlib.suppress(KeyError):
             self.pending_hugs.remove((source.id, target.id))
+        print(current_time, "remove source-target")
 
     @commands.guild_only()
     @commands.cooldown(rate=2, per=10.0, type=commands.BucketType.user)
