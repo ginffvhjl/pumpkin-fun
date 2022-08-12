@@ -17,8 +17,6 @@ from pie import check, utils, i18n
 from .database import Relation
 from .image_utils import ImageUtils
 
-# ODSTRANIT!!!!!!!!
-from datetime import datetime
 
 _ = i18n.Translator("modules/fun").translate
 config = pie.database.config.Config.get()
@@ -44,7 +42,6 @@ class Fun(commands.Cog):
         self.bot = bot
 
         self.pending_highfives: Set[Tuple[int, int]] = {*()}
-        self.pending_hugs: Set[Tuple[int, int]] = {*()}
 
     @commands.guild_only()
     # @commands.cooldown(rate=2, per=10.0, type=commands.BucketType.user)
@@ -70,7 +67,30 @@ class Fun(commands.Cog):
 
         border: str = "***" if type(target) == nextcord.Role else "**"
 
-        if (target.id, source.id) not in self.pending_hugs:
+        def get_callings(member):
+            return [
+                str(member.id),
+                member.mention,
+                member.name,
+                member.nick,
+                f"{member.name}#{member.discriminator}",
+            ]
+
+        source_callings = get_callings(source)
+        command = f"{config.prefix}hug "
+        command_len = len(command)
+
+        def check(msg):
+            return (
+                msg.author == target
+                and msg.channel == ctx.channel
+                and msg.content[:command_len] == command
+                and msg.content[command_len:].strip() in source_callings
+            )
+
+        try:
+            await self.bot.wait_for("message", timeout=20.0, check=check)
+        except asyncio.TimeoutError:
             hug_emoji: str = "(⊃・ᴗ・)⊃" if random.randint(1, 20) < 20 else "⊃・﹏・)⊃"
             target_name: str = utils.text.sanitise(target.display_name)
             message: str = f"{hug_emoji} {border}{target_name}{border}"
@@ -78,27 +98,11 @@ class Fun(commands.Cog):
             hug_emoji: str = (
                 r"(つˆ⌣ˆ)つ⊂(・ᴗ・⊂)" if random.randint(1, 20) < 20 else r"(つˆ⌣ˆ)つ⊂(・﹏・⊂)"
             )
-
             source_name: str = utils.text.sanitise(source.display_name)
             target_name: str = utils.text.sanitise(target.display_name)
             message: str = f"{border}{source_name}{border} {hug_emoji} {border}{target_name}{border}"
-
-        now = datetime.now()
-        current_time = now.strftime("%H:%M:%S")
-        print("\n")
-
-        await ctx.send(message)
-        self.pending_hugs.add((source.id, target.id))
-        print(current_time, "add source-target")
-        # source, target = target, source
-        # print(current_time, "swap")
-        with contextlib.suppress(KeyError):
-            self.pending_hugs.remove((target.id, source.id))
-        print(current_time, "remove target-source")
-        await asyncio.sleep(5)
-        with contextlib.suppress(KeyError):
-            self.pending_hugs.remove((source.id, target.id))
-        print(current_time, "remove source-target")
+        finally:
+            await ctx.send(message)
 
     @commands.guild_only()
     @commands.cooldown(rate=2, per=10.0, type=commands.BucketType.user)
